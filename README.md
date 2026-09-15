@@ -1,47 +1,29 @@
-# Stand Up Seeker — source-agnostic build
+# Stand Up Seeker — API-ready Vercel build
 
-This version does **not require Ticketmaster**. Stand Up Seeker owns a normalized show record and can merge many discovery/verification sources into one listing.
+This build adds a working Vercel serverless endpoint at `api/events.js` and a normalized seed store at `data/events.json`.
+
+## Deploy/update on Vercel
+Upload the **contents** of this folder to the existing GitHub `Stand-Up-seeker` repository and commit the changes. Vercel will automatically redeploy the existing project.
+
+No API key or environment variable is required for this API-ready version.
+
+## Test after deployment
+Open your live site and search **Boston / October 29, 2026**. You should see one clearly labeled demo listing rather than “Unable to load listings.”
+
+You can also test the endpoint directly at:
+`/api/events?city=Boston&date=2026-10-29&window=0`
+
+## Important
+The included event is deliberately labeled demo/seed data. This build proves the frontend-to-backend path; it does **not** claim to contain live tour data yet.
+
+## Next data layer
+The API is source-agnostic. Future collectors can write normalized records to a persistent database from official comedian tour pages, venue calendars, and primary ticketing sources. Ticketmaster can remain optional.
 
 ## Ticket destination priority
-The UI always says **Official Tickets**. The backend chooses the best available destination in this order:
-1. explicit primary/official ticket URL stored on the show
-2. comedian official tour-page link
-3. venue official event-page link
-4. primary ticketing platform link (AXS / Etix / Eventbrite / Ticketmaster, etc.)
+1. explicit official/primary ticket URL
+2. comedian official tour page
+3. venue official event page
+4. primary ticketing platform
 
-Ticketmaster is optional and is treated only as an extra discovery source when `TICKETMASTER_API_KEY` exists.
-
-## What works now
-- Runs with no API keys
-- Normalized Stand Up Seeker event store (`data/events.json`)
-- Source-agnostic event records
-- Multiple verification sources per show
-- Deduplication across feeds by comedian + venue + date + time
-- Confidence/verification metadata
-- Official Tickets button rather than seller branding
-- Optional Ticketmaster adapter (`providers/ticketmaster.js`)
-- Cleared-image logic with fallback initials
-
-## Run locally
-```bash
-npm install
-npm start
-```
-Then open `http://localhost:3000`.
-
-Optional Ticketmaster enrichment:
-```bash
-TICKETMASTER_API_KEY=your_key_here npm start
-```
-
-## Adding real official listings
-Add normalized events to `data/events.json`, or build source adapters that emit the same record shape. Each show can have:
-- `officialArtistUrl`
-- `officialVenueUrl`
-- `primaryTicketUrl`
-- `ticketProvider`
-- `verificationSources[]`
-- `confidence`
-- `imageUrl` / `imageRights`
-
-The next production step is to add per-site adapters or a scheduled ingestion worker for the curated comedian roster and venue calendars. Generic scraping is intentionally not embedded because official sites differ and some prohibit automated access; adapters should obey each site's terms/robots and prefer structured feeds when available.
+## Image rights
+The frontend only renders headshots marked `official`, `licensed`, `feed_authorized`, `artist_supplied`, or `promoter_supplied`; otherwise it uses initials.

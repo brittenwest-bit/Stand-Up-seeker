@@ -1,0 +1,22 @@
+[
+  {
+    "id": "demo-bos-2026-10-29-1",
+    "comedian": "Demo Headliner",
+    "tour": "Stand Up Seeker Demo Listing",
+    "venue": "Sample Theatre",
+    "city": "Boston",
+    "state": "MA",
+    "date": "2026-10-29",
+    "time": "20:00",
+    "tier": "major",
+    "ticketUrl": "",
+    "ticketProvider": "official",
+    "imageUrl": "",
+    "imageRights": "none",
+    "verifiedAt": "2026-09-14T22:00:00Z",
+    "sources": [
+      {"type":"demo","name":"Stand Up Seeker seed data","url":""}
+    ],
+    "isDemo": true
+  }
+]
