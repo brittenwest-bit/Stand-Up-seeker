@@ -41,8 +41,9 @@ module.exports = async function handler(req, res) {
 
     const params = new URLSearchParams({
       select:
-        "id,event_name,starts_at,local_date,local_time,city,state_region,country,official_ticket_url,ticket_provider,status,verification_status,last_verified_at,comedians(name,tier,image_url),venues(name,official_url)",
+        "id,event_name,starts_at,local_date,local_time,city,state_region,country,official_ticket_url,ticket_provider,status,verification_status,verification_reason,confidence_score,source_count,last_verified_at,comedians(name,tier,image_url,image_rights),venues(name,official_url)",
       city: `ilike.${city}`,
+      publishable: "eq.true",
       local_date: `gte.${startDate}`,
       order: "starts_at.asc"
     });
@@ -86,6 +87,10 @@ module.exports = async function handler(req, res) {
       imageUrl: row.comedians?.image_url || "",
       verifiedAt: row.last_verified_at,
       verificationStatus: row.verification_status,
+      verificationReason: row.verification_reason || "",
+      confidenceScore: row.confidence_score || 0,
+      sourceCount: row.source_count || 0,
+      imageRights: row.comedians?.image_rights || "none",
       status: row.status
     }));
 
