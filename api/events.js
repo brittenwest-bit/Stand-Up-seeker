@@ -8,9 +8,9 @@ module.exports = async function handler(req, res) {
       Math.min(7, Number(req.query.window || 0))
     );
 
-    if ((!city && !comedian) || !date) {
+    if (!comedian && (!city || !date)) {
       return res.status(400).json({
-        error: "city or comedian, plus date, are required"
+        error: "city and date are required unless searching by comedian"
       });
     }
 
@@ -23,7 +23,8 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const target = new Date(`${date}T12:00:00Z`);
+    const effectiveDate = comedian ? new Date().toISOString().slice(0, 10) : date;
+    const target = new Date(`${effectiveDate}T12:00:00Z`);
 
     if (Number.isNaN(target.getTime())) {
       return res.status(400).json({
@@ -32,10 +33,10 @@ module.exports = async function handler(req, res) {
     }
 
     const start = new Date(target);
-    start.setUTCDate(start.getUTCDate() - windowDays);
+    if (!comedian) start.setUTCDate(start.getUTCDate() - windowDays);
 
     const end = new Date(target);
-    end.setUTCDate(end.getUTCDate() + windowDays);
+    if (!comedian) end.setUTCDate(end.getUTCDate() + windowDays); else end.setUTCFullYear(end.getUTCFullYear() + 2);
 
     const startDate = start.toISOString().slice(0, 10);
     const endDate = end.toISOString().slice(0, 10);
@@ -49,7 +50,7 @@ module.exports = async function handler(req, res) {
     });
 
     params.append("local_date", `lte.${endDate}`);
-    if (city) params.set("city", `ilike.${city}`);
+    if (city && !comedian) params.set("city", `ilike.${city}`);
     if (comedian) params.set("comedians.name", `ilike.${comedian}`);
 
     const response = await fetch(
@@ -106,8 +107,8 @@ module.exports = async function handler(req, res) {
       meta: {
         city,
         comedian,
-        date,
-        window: windowDays,
+        date: comedian ? null : date,
+        window: comedian ? null : windowDays,
         count: events.length,
         mode: "supabase-live",
         generatedAt: new Date().toISOString()
