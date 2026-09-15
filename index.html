@@ -16,7 +16,7 @@
   <section class="hero">
     <div><div class="brand">Stand Up <span>Seeker</span></div><div class="tag">Find great stand-up wherever you are</div></div>
     <div class="searchbox">
-      <div class="field"><label for="city">City</label><select id="city"><option>Boston</option><option>New York</option><option>Las Vegas</option><option>Chicago</option><option>Austin</option><option>Denver</option><option>Los Angeles</option></select></div>
+      <div class="field"><label for="city">City</label><input id="city" type="text" value="Boston" list="popularCities" autocomplete="address-level2" placeholder="Enter any city"><datalist id="popularCities"><option value="Boston"><option value="New York"><option value="Las Vegas"><option value="Chicago"><option value="Austin"><option value="Denver"><option value="Los Angeles"><option value="San Francisco"><option value="Seattle"><option value="Washington"><option value="Philadelphia"><option value="Atlanta"><option value="Dallas"><option value="Houston"><option value="Nashville"><option value="Cleveland"><option value="Portland"><option value="Phoenix"><option value="San Diego"><option value="Miami"></datalist></div>
       <div class="field"><label for="date">Date</label><input id="date" type="date" value="2026-10-29"></div>
       <button id="searchBtn" class="searchbtn">Find stand-up →</button>
     </div>
@@ -43,7 +43,7 @@ function renderRows(rows){document.getElementById('resultTitle').textContent=`Co
 async function render(){results.innerHTML='<div style="padding:28px 8px;color:#6b7c8e">Checking live comedy listings…</div>';empty.style.display='none';const params=new URLSearchParams({city:city.value,date:date.value,window:String(dayWindow)});try{const r=await fetch(`/api/events?${params}`);const data=await r.json();if(!r.ok)throw new Error(data.message||data.error||'Unable to load shows');renderRows(data.events||[]);document.getElementById('lastUpdated').textContent='Sources checked · just now';}catch(err){results.innerHTML=`<div style="padding:26px 8px;color:#6b7c8e"><b>Unable to load listings.</b><br>${esc(err.message)}</div>`;document.getElementById('count').textContent='';}}
 document.querySelectorAll('[data-window]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-window]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');dayWindow=Number(btn.dataset.window);render()}));
 document.getElementById('live').addEventListener('click',e=>{e.currentTarget.classList.toggle('active');render()});
-document.getElementById('searchBtn').addEventListener('click',render);
+document.getElementById('searchBtn').addEventListener('click',render);city.addEventListener('keydown',e=>{if(e.key==='Enter')render()});
 render();
 </script>
 </body></html>
