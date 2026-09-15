@@ -51,7 +51,7 @@ module.exports = async function handler(req, res) {
 
     params.append("local_date", `lte.${endDate}`);
     if (city && !comedian) params.set("city", `ilike.${city}`);
-    if (comedian) params.set("comedians.name", `ilike.${comedian}`);
+    if (comedian) { params.set("comedians", `not.is.null`); params.set("comedians.name", `ilike.${comedian}`); }
 
     const response = await fetch(
       `${supabaseUrl}/rest/v1/shows?${params.toString()}`,
