@@ -2,14 +2,15 @@ module.exports = async function handler(req, res) {
   try {
     const city = String(req.query.city || "").trim();
     const date = String(req.query.date || "").trim();
+    const comedian = String(req.query.comedian || "").trim();
     const windowDays = Math.max(
       0,
       Math.min(7, Number(req.query.window || 0))
     );
 
-    if (!city || !date) {
+    if ((!city && !comedian) || !date) {
       return res.status(400).json({
-        error: "city and date are required"
+        error: "city or comedian, plus date, are required"
       });
     }
 
@@ -42,13 +43,14 @@ module.exports = async function handler(req, res) {
     const params = new URLSearchParams({
       select:
         "id,event_name,starts_at,local_date,local_time,city,state_region,country,official_ticket_url,ticket_provider,status,verification_status,verification_reason,confidence_score,source_count,last_verified_at,comedians(name,tier,image_url,image_rights),venues(name,official_url)",
-      city: `ilike.${city}`,
       publishable: "eq.true",
       local_date: `gte.${startDate}`,
       order: "starts_at.asc"
     });
 
     params.append("local_date", `lte.${endDate}`);
+    if (city) params.set("city", `ilike.${city}`);
+    if (comedian) params.set("comedians.name", `ilike.${comedian}`);
 
     const response = await fetch(
       `${supabaseUrl}/rest/v1/shows?${params.toString()}`,
@@ -103,6 +105,7 @@ module.exports = async function handler(req, res) {
       events,
       meta: {
         city,
+        comedian,
         date,
         window: windowDays,
         count: events.length,
