@@ -1,16 +1,24 @@
-# Stand Up Seeker — clean restart
+# Stand Up Seeker
 
-This is the minimal Vercel-ready restart build.
+Vercel-hosted stand-up comedy discovery app backed by Supabase.
 
 ## Structure
 - `index.html` — app UI
 - `hero-stage.png` — hero image
-- `api/events.js` — self-contained Vercel serverless API
+- `api/events.js` — verified-event search API
+- `api/comedians.js` — comedian search API
+- `api/ingest.js` — authenticated structured ingestion API
 
-There is deliberately **no data folder, package.json, build command, API key, or environment variable** in this test build.
+## Required Vercel environment variables
+- `SUPABASE_URL` — project URL
+- `SUPABASE_ANON_KEY` — publishable/anon key used by read APIs
+- `SUPABASE_SERVICE_ROLE_KEY` — server-only service-role key used only by `/api/ingest`; never expose it to browser code
+- `INGEST_API_KEY` — long random secret required as `Authorization: Bearer <secret>` for `/api/ingest`
 
-## Deploy
-Upload these three items to the **root** of the existing GitHub repository, preserving the `api/events.js` folder path. Vercel should redeploy automatically.
+## Ingestion safety
+`POST /api/ingest` accepts a JSON body containing `events` (1–100 items). It does not scrape tour pages and it does not invent timestamps. Every event must include an exact timezone-aware `starts_at`, a display `local_time`, normalized venue/city/country information, an HTTPS official ticket URL, and at least one authoritative source marked official. Invalid/TBA-time records are rejected. Duplicate source keys are detected before insertion. Venue coordinates are stored only when explicitly supplied with `coordinates_verified: true`.
 
-## Test
-After Vercel says Ready, visit `/api/events?city=Boston&date=2026-10-29` on the deployed domain. It should return JSON with one clearly labeled demo event.
+The former scheduled scraper cron was removed because it created noon placeholder timestamps and could mark artist-page discoveries as verified without exact performance-time corroboration.
+
+## Deployment
+The repository is Vercel-ready. Production must have the environment variables above configured before the ingestion endpoint will accept requests. Keep `SUPABASE_SERVICE_ROLE_KEY` and `INGEST_API_KEY` server-side only.
