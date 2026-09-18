@@ -45,6 +45,7 @@ module.exports = async function handler(req, res) {
       select:
         "id,event_name,starts_at,local_date,local_time,city,state_region,country,official_ticket_url,ticket_provider,status,verification_status,verification_reason,confidence_score,source_count,last_verified_at,comedians(name,tier,image_url,image_rights),venues(name,official_url)",
       publishable: "eq.true",
+      verification_status: "in.(verified,verified_2_source)",
       local_date: `gte.${startDate}`,
       order: "starts_at.asc"
     });
