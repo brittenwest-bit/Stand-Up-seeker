@@ -67,11 +67,23 @@ BEGIN
   -- UTC canonical timestamp; titles and URL tracking parameters do not affect identity.
   k := 'v2:' || (event->>'comedian_id') || ':' || v.id::text || ':' ||
        to_char((event->>'starts_at')::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"');
+  -- Legacy rows may have noon placeholders: match their exact local show time too.
+  -- Never merge distinct early/late performances or guess a timezone.
   SELECT count(*) INTO matches FROM public.shows WHERE comedian_id=(event->>'comedian_id')::uuid
-    AND venue_id=v.id AND starts_at=(event->>'starts_at')::timestamptz;
+    AND venue_id=v.id AND (
+      starts_at=(event->>'starts_at')::timestamptz
+      OR (local_date=(event->>'local_date')::date
+          AND CASE WHEN local_time ~* '^(([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?|(0?[1-9]|1[0-2]):[0-5][0-9] ?[AP]M)$'
+                   THEN local_time::time END = (event->>'local_time')::time)
+    );
   IF matches > 1 THEN RAISE EXCEPTION 'Ambiguous existing performance'; END IF;
   SELECT * INTO s FROM public.shows WHERE comedian_id=(event->>'comedian_id')::uuid
-    AND venue_id=v.id AND starts_at=(event->>'starts_at')::timestamptz FOR UPDATE;
+    AND venue_id=v.id AND (
+      starts_at=(event->>'starts_at')::timestamptz
+      OR (local_date=(event->>'local_date')::date
+          AND CASE WHEN local_time ~* '^(([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?|(0?[1-9]|1[0-2]):[0-5][0-9] ?[AP]M)$'
+                   THEN local_time::time END = (event->>'local_time')::time)
+    ) FOR UPDATE;
   IF s.id IS NULL THEN
     INSERT INTO public.shows(comedian_id,venue_id,event_name,starts_at,local_date,local_time,city,state_region,country,official_ticket_url,ticket_provider,status,verification_status,source_key)
     VALUES((event->>'comedian_id')::uuid,v.id,event->>'event_name',(event->>'starts_at')::timestamptz,(event->>'local_date')::date,event->>'local_time',v.city,v.state_region,v.country,event->>'official_ticket_url',event->>'ticket_provider','scheduled','unverified',k)
@@ -90,6 +102,7 @@ BEGIN
   END LOOP;
   UPDATE public.shows SET source_key=coalesce(source_key,k),verification_status=CASE WHEN verification_status='verified_2_source' THEN verification_status ELSE 'verified' END,publishable=true,
     last_verified_at=now(),updated_at=now(),local_time=event->>'local_time',
+    starts_at=(event->>'starts_at')::timestamptz,
     source_count=(SELECT count(*) FROM public.show_sources WHERE show_id=s.id AND is_official),
     confidence_score=greatest(confidence_score,70),
     verification_reason='Structured ingestion: exact time and authoritative source(s) supplied'
