@@ -56,6 +56,7 @@ alter table public.venues add constraint venues_verified_coordinates_complete ch
     and longitude is not null
     and nullif(trim(coordinates_source_url), '') is not null
     and coordinates_source_url ~ '^https?://'
+    and coordinates_source_type is not null
     and coordinates_source_type in (
       'official_venue',
       'official_promoter',
@@ -85,8 +86,8 @@ create or replace function public.set_verified_venue_coordinates(
   p_verified_at timestamptz default now()
 ) returns public.venues
 language plpgsql
-security definer
-set search_path = public
+security invoker
+set search_path = ''
 as $$
 declare
   v_venue public.venues;
