@@ -16,11 +16,28 @@ alter table public.venues drop constraint if exists venues_longitude_range;
 alter table public.venues add constraint venues_longitude_range
   check (longitude is null or longitude between -180 and 180);
 
+-- Coordinates are all-or-nothing. This prevents a partially populated venue from
+-- looking geocoded to future queries or maintenance scripts.
+alter table public.venues drop constraint if exists venues_coordinate_pair_complete;
+alter table public.venues add constraint venues_coordinate_pair_complete check (
+  (latitude is null and longitude is null)
+  or (latitude is not null and longitude is not null)
+);
+
+-- Verification metadata is also all-or-nothing. If coordinates are marked verified,
+-- retain their source. Conversely, source metadata/timestamps cannot exist without a
+-- complete coordinate pair. Unverified coordinate pairs may exist temporarily, but
+-- Map/API code must continue to require coordinates_verified_at before publishing.
 alter table public.venues drop constraint if exists venues_verified_coordinates_complete;
 alter table public.venues add constraint venues_verified_coordinates_complete check (
-  coordinates_verified_at is null
+  (
+    coordinates_verified_at is null
+    and coordinates_source_url is null
+    and coordinates_source_type is null
+  )
   or (
-    latitude is not null
+    coordinates_verified_at is not null
+    and latitude is not null
     and longitude is not null
     and nullif(trim(coordinates_source_url), '') is not null
     and coordinates_source_url ~ '^https?://'
