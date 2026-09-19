@@ -35,7 +35,7 @@ async function run(query) {
 }
 
 test('comedian search ignores city, date, and window criteria', async () => {
-  const { res, params } = await run({ comedian: 'Tom Papa', city: 'Boston', date: '1999-01-01', window: '7' });
+  const { res, params } = await run({ comedian: 'Tom Papa', city: 'Boston', date: '1999-01-01', window: 'nonsense' });
   assert.equal(res.statusCode, 200);
   assert.equal(params.get('comedians.name'), 'ilike.Tom Papa');
   assert.equal(params.has('city'), false);
@@ -72,4 +72,12 @@ test('discover rejects impossible dates before querying Supabase', async () => {
   const { res, requestedUrl } = await run({ city: 'Boston', date: '2026-02-30' });
   assert.equal(res.statusCode, 400);
   assert.equal(requestedUrl, '');
+});
+
+test('discover rejects malformed or out-of-range search windows before querying Supabase', async () => {
+  for (const window of ['nonsense', '-1', '8', '1.5']) {
+    const { res, requestedUrl } = await run({ city: 'Boston', date: '2026-10-01', window });
+    assert.equal(res.statusCode, 400, `expected ${window} to be rejected`);
+    assert.equal(requestedUrl, '');
+  }
 });
