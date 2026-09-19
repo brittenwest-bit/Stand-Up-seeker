@@ -2,12 +2,15 @@ module.exports = async function handler(req, res) {
   try {
     const city = String(req.query.city || "").trim(); const date = String(req.query.date || "").trim(); const comedian = String(req.query.comedian || "").trim();
     const view = String(req.query.view || "").trim(); const month = String(req.query.month || "").trim(); const calendarMode = view === "calendar"; const mapMode = view === "map";
-    const windowDays = Math.max(0, Math.min(7, Number(req.query.window || 0)));
+    const rawWindow = req.query.window == null || req.query.window === "" ? 0 : Number(req.query.window);
+    const validWindow = Number.isInteger(rawWindow) && rawWindow >= 0 && rawWindow <= 7;
+    const windowDays = validWindow ? rawWindow : 0;
     const validMonth = value => { if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return false; const [y,m]=value.split("-").map(Number); const d=new Date(Date.UTC(y,m-1,1)); return d.getUTCFullYear()===y && d.getUTCMonth()===m-1; };
     const validDate = value => { if (!/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value)) return false; const [y,m,d]=value.split("-").map(Number); const parsed=new Date(Date.UTC(y,m-1,d)); return parsed.getUTCFullYear()===y && parsed.getUTCMonth()===m-1 && parsed.getUTCDate()===d; };
     if (!calendarMode && !mapMode && !comedian && (!city || !date)) return res.status(400).json({ error: "city and date are required unless searching by comedian" });
     if (calendarMode && !validMonth(month)) return res.status(400).json({ error: "calendar month must be a valid YYYY-MM" });
     if (!calendarMode && !mapMode && !comedian && !validDate(date)) return res.status(400).json({ error: "date must be a valid YYYY-MM-DD" });
+    if (!calendarMode && !mapMode && !comedian && !validWindow) return res.status(400).json({ error: "window must be an integer from 0 to 7" });
     const supabaseUrl=process.env.SUPABASE_URL, supabaseKey=process.env.SUPABASE_ANON_KEY; if(!supabaseUrl||!supabaseKey)return res.status(500).json({error:"Supabase environment variables are missing"});
     let startDate,endDate;
     if(calendarMode){const [year,mon]=month.split("-").map(Number);startDate=`${month}-01`;endDate=new Date(Date.UTC(year,mon,0)).toISOString().slice(0,10)}
