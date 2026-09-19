@@ -24,6 +24,21 @@ alter table public.venues add constraint venues_coordinate_pair_complete check (
   or (latitude is not null and longitude is not null)
 );
 
+-- Only source classes with a repeatable verification path may mark coordinates as
+-- verified. Generic search results, snippets, inferred addresses, or guessed points
+-- are deliberately excluded.
+alter table public.venues drop constraint if exists venues_coordinate_source_type_allowed;
+alter table public.venues add constraint venues_coordinate_source_type_allowed check (
+  coordinates_source_type is null
+  or coordinates_source_type in (
+    'official_venue',
+    'official_promoter',
+    'official_ticketing',
+    'government_gis',
+    'authoritative_map'
+  )
+);
+
 -- Verification metadata is also all-or-nothing. If coordinates are marked verified,
 -- retain their source. Conversely, source metadata/timestamps cannot exist without a
 -- complete coordinate pair. Unverified coordinate pairs may exist temporarily, but
@@ -41,7 +56,13 @@ alter table public.venues add constraint venues_verified_coordinates_complete ch
     and longitude is not null
     and nullif(trim(coordinates_source_url), '') is not null
     and coordinates_source_url ~ '^https?://'
-    and nullif(trim(coordinates_source_type), '') is not null
+    and coordinates_source_type in (
+      'official_venue',
+      'official_promoter',
+      'official_ticketing',
+      'government_gis',
+      'authoritative_map'
+    )
   )
 );
 
@@ -52,7 +73,7 @@ create index if not exists venues_verified_coordinates_idx
 comment on column public.venues.coordinates_source_url is
   'Authoritative source used to verify the stored venue coordinates.';
 comment on column public.venues.coordinates_source_type is
-  'Verification source class, e.g. official_venue, official_promoter, authoritative_map.';
+  'Controlled verification source class: official_venue, official_promoter, official_ticketing, government_gis, or authoritative_map.';
 
 -- Safe write helper. Intended for trusted server-side/service-role use only.
 create or replace function public.set_verified_venue_coordinates(
@@ -69,6 +90,7 @@ set search_path = public
 as $$
 declare
   v_venue public.venues;
+  v_source_type text := lower(trim(p_source_type));
 begin
   if p_latitude is null or p_latitude not between -90 and 90 then
     raise exception 'latitude must be between -90 and 90';
@@ -79,15 +101,21 @@ begin
   if nullif(trim(p_source_url), '') is null or p_source_url !~ '^https?://' then
     raise exception 'an authoritative http(s) source URL is required';
   end if;
-  if nullif(trim(p_source_type), '') is null then
-    raise exception 'coordinate source type is required';
+  if v_source_type is null or v_source_type not in (
+    'official_venue',
+    'official_promoter',
+    'official_ticketing',
+    'government_gis',
+    'authoritative_map'
+  ) then
+    raise exception 'unsupported coordinate source type: %', p_source_type;
   end if;
 
   update public.venues
      set latitude = p_latitude,
          longitude = p_longitude,
          coordinates_source_url = trim(p_source_url),
-         coordinates_source_type = trim(p_source_type),
+         coordinates_source_type = v_source_type,
          coordinates_verified_at = coalesce(p_verified_at, now())
    where id = p_venue_id
    returning * into v_venue;
